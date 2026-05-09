@@ -3532,8 +3532,9 @@ body.maximized {
 /* ── Landscape NP (fullscreen mode) ── */
 @media (orientation: landscape) {
     #mob-nav { display: none !important; }
-    #bar { bottom: 0; }
-
+    #bar { bottom: 0; left: 0; right: 0; border-radius: 0; }
+ 
+    /* 아트 영역: 좌측 46%, 세로 중앙 */
     #np.fullscreen .np-art-area {
         position: absolute !important;
         left: 0 !important;
@@ -3543,53 +3544,98 @@ body.maximized {
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        padding: 40px 20px 100px 32px !important;
+        padding: 40px 20px 130px 32px !important;
+        gap: 0 !important;
     }
-
+ 
+    /* has-lyrics 클래스 오염 차단 */
+    #np.fullscreen .np-art-area.has-lyrics {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 40px 20px 130px 32px !important;
+        gap: 0 !important;
+    }
+ 
+    /* 앨범아트 크기 */
     #np.fullscreen .np-art-shell {
         width: min(340px, 38vw, 72vh) !important;
+        margin-top: 0 !important;
     }
-
+ 
+    /* 노말모드 가사 패널 숨김 */
     #np.fullscreen .np-lyrics-panel {
         display: none !important;
     }
-
+ 
+    /* 컨트롤 패널: JS(_positionFsPanel)가 top/left/width 인라인 세팅
+       CSS는 position/style만 정의, bottom 속성 사용 금지(JS top과 충돌) */
     #np.fullscreen .np-panel {
         position: absolute !important;
-        left: 0 !important;
-        bottom: 0 !important;
-        width: 46% !important;
-        padding: 10px 32px 20px !important;
         background: none !important;
         box-shadow: none !important;
+        padding: 14px 24px 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        z-index: 15;
     }
-
+ 
+    /* 제목/채널명 크기 */
+    #np.fullscreen .np-title {
+        font-size: clamp(14px, 1.5vw, 18px) !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+ 
+    #np.fullscreen .np-ch {
+        font-size: clamp(11px, 1.1vw, 13px) !important;
+    }
+ 
+    /* 즐겨찾기 버튼 숨김 */
+    #np.fullscreen .np-act {
+        display: none !important;
+    }
+ 
+    /* 재생 컨트롤 / 볼륨+에코 landscape에서 표시 */
+    #np.fullscreen .np-ctrl {
+        display: flex !important;
+    }
+ 
+    #np.fullscreen .np-bottom-row {
+        display: flex !important;
+    }
+ 
+    /* 전체화면 가사 패널: 우측 54% */
     #np.fullscreen #np-fs-lyrics {
-        position: absolute;
-        right: 0;
-        top: 0;
-        width: 54%;
-        height: 100%;
-        display: block;
-        overflow: hidden;
-        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-        mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-        padding: 0 24px 0 20px;
-        z-index: 10;
-        pointer-events: none;
+        position: absolute !important;
+        right: 0 !important;
+        top: 0 !important;
+        width: 54% !important;
+        height: 100% !important;
+        display: block !important;
+        overflow: hidden !important;
+        -webkit-mask-image: linear-gradient(
+            to bottom, transparent 0%, black 10%, black 90%, transparent 100%
+        );
+        mask-image: linear-gradient(
+            to bottom, transparent 0%, black 10%, black 90%, transparent 100%
+        );
+        padding: 0 24px 0 20px !important;
+        z-index: 10 !important;
+        pointer-events: none !important;
     }
-
+ 
+    /* 닫기 버튼 위치 */
     .np-x {
         top: 12px;
         left: 16px;
     }
-
-    /* In landscape NP, panels ← */
-    #np.fullscreen .np-title {
-        font-size: clamp(14px, 1.5vw, 18px);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+ 
+    /* 진행 바 너비 */
+    #np.fullscreen .np-prog-wrap {
+        width: 100% !important;
     }
 }
 
