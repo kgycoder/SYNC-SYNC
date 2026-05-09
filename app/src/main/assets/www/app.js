@@ -2714,18 +2714,22 @@ updateBarVisibility();
 renderFavSide();
 setTimeout(() => { loadRec('pop music 2024 official', 'rec-row'); loadRec('kpop 2024 mv official', 'hot-row'); }, 700);
 setTimeout(() => toast('✦ SYNC에 오신 걸 환영해요'), 1000);
+
 /* ════════════════════════════════════════════
    ANDROID INTEGRATION
 ════════════════════════════════════════════ */
 
-// Android back button: close NP if open, else propagate
+// Android back button: fullscreen 해제 → NP 닫기 → 모달 닫기 순
 window.__onAndroidBack = function() {
     const np = document.getElementById('np');
+    if (np && np.classList.contains('fullscreen')) {
+        _exitNpFullscreen();
+        return;
+    }
     if (np && np.classList.contains('on')) {
         closeNP();
         return;
     }
-    // Could also close modals
     if (document.getElementById('pl-dialog-overlay')?.classList.contains('on')) {
         plDialogCancel(); return;
     }
@@ -2737,31 +2741,100 @@ window.__onAndroidBack = function() {
     }
 };
 
-// Landscape = fullscreen NP (if NP is open)
-let _lastOrientation = screen.orientation?.type || '';
+// ── fullscreen 진입 ────────────────────────────────────────────────
+function _enterNpFullscreen() {
+    const np = document.getElementById('np');
+    if (!np || np.classList.contains('fullscreen')) return;
+
+    np.classList.add('fullscreen');
+    document.body.classList.add('maximized');
+    _attachFsResizeObserver();
+
+    // 노말모드 가사 하이라이트 클래스 즉시 제거
+    document.querySelectorAll('.np-lyric-line')
+        .forEach(el => el.classList.remove('active', 'prev', 'near'));
+
+    // 시스템 UI 숨김 (Android)
+    try { window.AndroidBridge.postMessage(JSON.stringify({ type: 'orientation', value: 'landscape' })); } catch {}
+
+    // 레이아웃 확정 후 패널 위치 + 가사 DOM 초기화
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                _positionFsPanel();
+                if (LY.lines.length > 0) {
+                    _buildFsLyricsDOM();
+                    requestAnimationFrame(() => { _highlightFsLine(LY.curIdx); });
+                }
+            });
+        });
+    });
+}
+
+// ── fullscreen 해제 ────────────────────────────────────────────────
+function _exitNpFullscreen() {
+    const np = document.getElementById('np');
+    if (!np || !np.classList.contains('fullscreen')) return;
+
+    np.classList.remove('fullscreen');
+    document.body.classList.remove('maximized');
+    _detachFsResizeObserver();
+    _restoreNormalMode();
+
+    // fs 전용 DOM 정리
+    document.getElementById('np-fs-lyrics')?.remove();
+    document.getElementById('np-fs-artist')?.remove();
+    _fsDotsLit = -1;
+    LY._dotElFs = null;
+
+    // 시스템 UI 복원 (Android)
+    try { window.AndroidBridge.postMessage(JSON.stringify({ type: 'orientation', value: 'portrait' })); } catch {}
+
+    // 노말모드 가사 복원
+    if (LY.lines.length > 0) {
+        _renderLyrics();
+        requestAnimationFrame(() => { _highlightLine(LY.curIdx, true); });
+    }
+}
+
+// ── _buildFsLyrics / _destroyFsLyrics 래퍼 ─────────────────────────
+function _buildFsLyrics() {
+    if (LY.lines.length > 0) _buildFsLyricsDOM();
+}
+function _destroyFsLyrics() {
+    _exitNpFullscreen();
+}
+
+// ── 가로/세로 전환 감지 ───────────────────────────────────────────
 function _onOrientationChange() {
     const isLandscape = window.innerWidth > window.innerHeight;
     const np = document.getElementById('np');
     if (!np) return;
-    if (isLandscape && np.classList.contains('on')) {
-        np.classList.add('fullscreen');
-        if (LY.lines.length > 0) _buildFsLyrics();
-        // Notify Android to go fullscreen
-        try { window.AndroidBridge.postMessage(JSON.stringify({ type: 'orientation', value: 'landscape' })); } catch {}
+
+    const nav = document.getElementById('mob-nav');
+
+    if (isLandscape) {
+        if (nav) nav.style.display = 'none';
+        // NP 열려 있고 아직 fullscreen 아닐 때 진입
+        if (np.classList.contains('on') && !np.classList.contains('fullscreen')) {
+            _enterNpFullscreen();
+        }
     } else {
-        np.classList.remove('fullscreen');
-        _destroyFsLyrics();
-        try { window.AndroidBridge.postMessage(JSON.stringify({ type: 'orientation', value: 'portrait' })); } catch {}
+        if (nav) nav.style.display = '';
+        // 세로 복귀 시 fullscreen 해제
+        if (np.classList.contains('fullscreen')) {
+            _exitNpFullscreen();
+        }
     }
 }
+
 window.addEventListener('resize', _onOrientationChange);
 window.addEventListener('orientationchange', () => setTimeout(_onOrientationChange, 150));
 
-// Touch on mini bar: seek via NP
+// Touch on mini bar: seek via progress area (bottom edge)
 const _barEl = document.getElementById('bar');
 if (_barEl) {
     _barEl.addEventListener('touchstart', e => {
-        // If touching progress area (bottom 4px)
         const rect = _barEl.getBoundingClientRect();
         const touch = e.touches[0];
         if (touch.clientY > rect.bottom - 8) {
